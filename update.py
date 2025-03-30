@@ -3,7 +3,7 @@ import os
 import argparse
 
 # config
-DEFAULT_VERSION_URL = "https://goober.whatdidyouexpect.eu/latest_version.json"
+DEFAULT_VERSION_URL = "https://tsubaki.expect.ovh/latest_version.json"
 LOCAL_VERSION_FILE = "current_version.txt"
 SCRIPT_FILE = "bot.py"
 CONFIG_FILE = "config.py"
