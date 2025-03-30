@@ -1,9 +1,10 @@
-Discord bot that learns from what people say!
+# Nyara Tsubaki is a pretty known little goober catgirl made by @QuantumMapleQc! 
+Thanks to the authorisation of Whatdidyouexpect i have cloned his repo for my version of it with a few changes in the code
 
-Please see the [wiki](https://wiki.goober.whatdidyouexpect.eu)
+#Rules 
+Please do not attempt to BYPASS the filter in anyways possible!
+Anything you say to it will be controlled with care.
 
-keep in mind that most of the bot was written at 2am 
-
-[Goober Central](https://github.com/whatdidyouexpect/goober-central)
-
-![the goober](https://goober.whatdidyouexpect.eu/imgs/goobs/goobs.png)
+# Host 
+This thing is being hosted on an ***Aspire-V3-551G*** a pretty old computer running Linux Mint. 
+https://i.postimg.cc/MZMyVxXN/image.png
