@@ -491,33 +491,63 @@ async def help(ctx):
 
 @bot.event
 async def on_message(message):
-    global memory, markov_model, last_random_talk_time
-
-    if message.author.bot:
+    # Don't respond to ourselves or other bots
+    if message.author == bot.user or message.author.bot:
         return
 
-    if str(message.author.id) in BLACKLISTED_USERS:
-        return
-
-    if message.content.startswith((f"{PREFIX}talk", f"{PREFIX}mem", f"{PREFIX}help", f"{PREFIX}stats", f"{PREFIX}")):
-        print(f"{get_translation(LOCALE, 'command_ran').format(message=message)}")
-        await bot.process_commands(message)
-        return
-
-    if profanity.contains_profanity(message.content):
-        return
-
-    if message.content:
-        if not USERTRAIN_ENABLED:
-            return
-        formatted_message = append_mentions_to_18digit_integer(message.content)
-        cleaned_message = preprocess_message(formatted_message)
-        if cleaned_message:
-            memory.append(cleaned_message)
-            save_memory(memory)
-
-    # process any commands in the message
+    # Process commands first
     await bot.process_commands(message)
+
+    # Check if we should respond to this message (random chance or specific trigger)
+    if random.random() < 1.0:  # 20% chance to respond
+        # Generate response using similar logic to the talk command
+        response = None
+        for _ in range(20):
+            response = markov_model.make_sentence(tries=100, max_words=random.randint(3, 10))
+            if response and response not in generated_sentences:
+                response = improve_sentence_coherence(response)
+                generated_sentences.add(response)
+                break
+
+        if response:
+            cleaned_response = re.sub(r'[^\w\s]', '', response).lower()
+            coherent_response = rephrase_for_coherence(cleaned_response)
+            
+            # Save to memory.json as simple set of strings
+            try:
+                # Initialize memory.json with empty list if it doesn't exist
+                if not os.path.exists('memory.json'):
+                    with open('memory.json', 'w') as f:
+                        json.dump([], f)
+                
+                # Load existing memory
+                with open('memory.json', 'r') as f:
+                    memory = json.load(f)
+                
+                # Ensure memory is a list
+                if not isinstance(memory, list):
+                    memory = []
+                
+                # Add new response if it's not already there
+                if coherent_response not in memory:
+                    memory.append(coherent_response)
+                
+                # Save back to file
+                with open('memory.json', 'w') as f:
+                    json.dump(memory, f)
+                
+            except Exception as e:
+                print(f"Error saving to memory.json: {e}")
+
+            # Send response
+            if random.random() < 0.9 and is_positive(coherent_response):
+                gif_url = random.choice(positive_gifs)
+                combined_message = f"{coherent_response}\n[jif]({gif_url})"
+            else:
+                combined_message = coherent_response
+            
+            os.environ['gooberlatestgen'] = combined_message
+            await message.channel.send(combined_message)
 
 
 @bot.event
