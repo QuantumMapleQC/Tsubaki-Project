@@ -7,5 +7,4 @@ Anything you say to it will be controlled with care.
 
 # Host 
 This thing is being hosted on an ***Aspire-V3-551G*** a pretty old computer running Linux Mint. 
-[https://i.postimg.cc/MZMyVxXN/image.png
-](https://i.postimg.cc/MZMyVxXN/image.png)
+![image](https://github.com/user-attachments/assets/b03d40e0-2200-46bd-a39c-956844bc188b)
