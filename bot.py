@@ -21,10 +21,109 @@ from config import *
 import traceback
 import shutil
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import sqlite3
+from sqlite3 import Error
 
 analyzer = SentimentIntensityAnalyzer()
 
 print(splashtext) # you can use https://patorjk.com/software/taag/ for 3d text or just remove this entirely
+
+def create_connection(db_file):
+    """ Create a database connection to a SQLite database """
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+        print(f"{GREEN}SQLite connection established{RESET}")
+        return conn
+    except Error as e:
+        print(f"{RED}Error connecting to database: {e}{RESET}")
+    return conn
+
+def create_table(conn):
+    """ Create messages table if it doesn't exist """
+    try:
+        sql_create_messages_table = """ CREATE TABLE IF NOT EXISTS messages (
+                                        id integer PRIMARY KEY,
+                                        content text NOT NULL,
+                                        timestamp text DEFAULT CURRENT_TIMESTAMP
+                                    ); """
+        c = conn.cursor()
+        c.execute(sql_create_messages_table)
+        print(f"{GREEN}Messages table created or already exists{RESET}")
+    except Error as e:
+        print(f"{RED}Error creating table: {e}{RESET}")
+
+def insert_message(conn, message):
+    """ Insert a new message into the messages table """
+    sql = ''' INSERT INTO messages(content)
+              VALUES(?) '''
+    cur = conn.cursor()
+    cur.execute(sql, (message,))
+    conn.commit()
+    return cur.lastrowid
+
+def get_all_messages(conn):
+    """ Get all messages from the messages table """
+    cur = conn.cursor()
+    cur.execute("SELECT content FROM messages")
+    rows = cur.fetchall()
+    return [row[0] for row in rows]
+
+def count_messages(conn):
+    """ Count the number of messages in the database """
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM messages")
+    return cur.fetchone()[0]
+
+def convert_json_to_db(json_file, db_file):
+    """ Convert memory.json to SQLite database """
+    try:
+        # Check if JSON file exists
+        if not os.path.exists(json_file):
+            print(f"{YELLOW}{json_file} not found, skipping conversion{RESET}")
+            return False
+        
+        print(f"{GREEN}Found {json_file}, converting to database{RESET}")
+        
+        # Load data from JSON
+        with open(json_file, 'r') as f:
+            memory_data = json.load(f)
+        
+        # Create database connection
+        conn = create_connection(db_file)
+        if conn is not None:
+            create_table(conn)
+            
+            # Insert all messages
+            for message in memory_data:
+                insert_message(conn, message)
+            
+            print(f"{GREEN}Successfully converted {len(memory_data)} messages to database{RESET}")
+            
+            # Rename old JSON file
+            backup_file = json_file + '.bak'
+            os.rename(json_file, backup_file)
+            print(f"{GREEN}Renamed {json_file} to {backup_file}{RESET}")
+            
+            conn.close()
+            return True
+        else:
+            print(f"{RED}Failed to create database connection{RESET}")
+            return False
+    except Exception as e:
+        print(f"{RED}Error converting JSON to database: {e}{RESET}")
+        return False
+
+# Initialize database
+DATABASE_FILE = "memory.db"
+conn = create_connection(DATABASE_FILE)
+if conn is not None:
+    create_table(conn)
+    # Convert existing memory.json if it exists
+    convert_json_to_db("memory.json", DATABASE_FILE)
+else:
+    print(f"{RED}Failed to initialize database{RESET}")
+    exit(1)
 
 def download_json():
     locales_dir = "locales"
@@ -71,7 +170,7 @@ def get_translation(lang: str, key: str):
 
 
 def is_name_available(NAME):
-    if os.getenv("gooberTOKEN"):
+    if os.getenv("TsubakiTOKEN"):
         return
     try:
         response = requests.post(f"{VERSION_URL}/check-if-available", json={"name": NAME}, headers={"Content-Type": "application/json"})
@@ -92,7 +191,7 @@ def register_name(NAME):
             return
         # check if the name is avaliable
         if not is_name_available(NAME):
-            if os.getenv("gooberTOKEN"):
+            if os.getenv("TsubakiTOKEN"):
                 return
             print(f"{RED}{get_translation(LOCALE, 'name_taken')}{RESET}")
             quit()
@@ -104,8 +203,8 @@ def register_name(NAME):
             data = response.json()
             token = data.get("token")
             
-            if not os.getenv("gooberTOKEN"):
-                print(f"{GREEN}{get_translation(LOCALE, 'add_token').format(token=token)} gooberTOKEN=<token>.{RESET}")
+            if not os.getenv("TsubakiTOKEN"):
+                print(f"{GREEN}{get_translation(LOCALE, 'add_token').format(token=token)} TsubakiTOKEN=<token>.{RESET}")
                 quit()
             else:
                 print(f"{GREEN}{RESET}")
@@ -174,7 +273,7 @@ def generate_sha256_of_current_file():
 
 latest_version = "0.0.0"
 local_version = "0.14.8.3"
-os.environ['gooberlocal_version'] = local_version
+os.environ['Tsubakilocal_version'] = local_version
 
 
 def check_for_update():
@@ -188,7 +287,7 @@ def check_for_update():
         return None, None 
 
     latest_version = latest_version_info.get("version")
-    os.environ['gooberlatest_version'] = latest_version
+    os.environ['Tsubakilatest_version'] = latest_version
     download_url = latest_version_info.get("download_url")
 
     if not latest_version or not download_url:
@@ -199,8 +298,8 @@ def check_for_update():
         with open(LOCAL_VERSION_FILE, "w") as f:
             f.write(latest_version)
     generate_sha256_of_current_file()
-    gooberhash = latest_version_info.get("hash")
-    if gooberhash == currenthash:
+    Tsubakihash = latest_version_info.get("hash")
+    if Tsubakihash == currenthash:
         if local_version < latest_version:
             print(f"{YELLOW}{get_translation(LOCALE, 'new_version').format(latest_version=latest_version, local_version=local_version)}{RESET}")
             print(f"{YELLOW}{get_translation(LOCALE, 'changelog').format(VERSION_URL=VERSION_URL)}{RESET}")
@@ -227,38 +326,56 @@ def get_file_info(file_path):
 nltk.download('punkt')
 
 def load_memory():
-    data = []
-
-    # load data from MEMORY_FILE
+    """Load messages from the SQLite database"""
     try:
-        with open(MEMORY_FILE, "r") as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        pass
-
-    if not os.path.exists(MEMORY_LOADED_FILE):
-        try:
-            with open(DEFAULT_DATASET_FILE, "r") as f:
-                default_data = json.load(f)
-                data.extend(default_data) 
-        except FileNotFoundError:
-            pass
-        with open(MEMORY_LOADED_FILE, "w") as f:
-            f.write("Data loaded") 
-    return data
-
-def save_memory(memory):
-    with open(MEMORY_FILE, "w") as f:
-        json.dump(memory, f, indent=4)
+        if conn is not None:
+            return get_all_messages(conn)
+        else:
+            print(f"{RED}Database connection not established{RESET}")
+            return []
+    except Exception as e:
+        print(f"{RED}Error loading memory from database: {e}{RESET}")
+        return []
+    
+def save_memory(messages):
+    """Save messages to the SQLite database"""
+    try:
+        if conn is not None:
+            # Clear existing messages
+            cur = conn.cursor()
+            cur.execute("DELETE FROM messages")
+            
+            # Insert all new messages
+            for message in messages:
+                insert_message(conn, message)
+            
+            conn.commit()
+            print(f"{GREEN}Successfully saved {len(messages)} messages to database{RESET}")
+            return True
+        else:
+            print(f"{RED}Database connection not established{RESET}")
+            return False
+    except Exception as e:
+        print(f"{RED}Error saving memory to database: {e}{RESET}")
+        return False
 
 def train_markov_model(memory, additional_data=None):
     if not memory:
         return None
+    
+    # Get messages from database if memory is empty
+    if len(memory) == 0:
+        memory = load_memory()
+        if not memory:
+            return None
+    
     text = "\n".join(memory)
     if additional_data:
         text += "\n" + "\n".join(additional_data)
+    
     model = markovify.NewlineText(text, state_size=2)
     return model
+
 #this doesnt work and im extremely pissed and mad
 def append_mentions_to_18digit_integer(message):
     pattern = r'\b\d{18}\b'
@@ -324,19 +441,19 @@ def ping_server():
         "memory_file_info": file_info,
         "version": local_version,
         "slash_commands": slash_commands_enabled,
-        "token": gooberTOKEN
+        "token": TsubakiTOKEN
     }
     try:
         response = requests.post(VERSION_URL+"/ping", json=payload)
         if response.status_code == 200:
-            print(f"{GREEN}{get_translation(LOCALE, 'goober_ping_success').format(NAME=NAME)}{RESET}")
-            os.environ['gooberauthenticated'] = 'Yes'
+            print(f"{GREEN}{get_translation(LOCALE, 'Tsubaki_ping_success').format(NAME=NAME)}{RESET}")
+            os.environ['Tsubakiauthenticated'] = 'Yes'
         else:
-            print(f"{RED}{get_translation(LOCALE, 'goober_ping_fail')} {response.status_code}{RESET}")
-            os.environ['gooberauthenticated'] = 'No'
+            print(f"{RED}{get_translation(LOCALE, 'Tsubaki_ping_fail')} {response.status_code}{RESET}")
+            os.environ['Tsubakiauthenticated'] = 'No'
     except Exception as e:
-        print(f"{RED}{get_translation(LOCALE, 'goober_ping_fail2')} {str(e)}{RESET}")
-        os.environ['gooberauthenticated'] = 'No'
+        print(f"{RED}{get_translation(LOCALE, 'Tsubaki_ping_fail2')} {str(e)}{RESET}")
+        os.environ['Tsubakiauthenticated'] = 'No'
 
 
 positive_gifs = os.getenv("POSITIVE_GIFS").split(',')
@@ -387,25 +504,19 @@ async def retrain(ctx):
 
     message_ref = await send_message(ctx, f"{get_translation(LOCALE, 'command_markov_retrain')}")
     try:
-        with open(MEMORY_FILE, 'r') as f:
-            memory = json.load(f)
-    except FileNotFoundError:
-        await send_message(ctx, f"{get_translation(LOCALE, 'command_markov_memory_not_found')}")
+        memory = load_memory()
+        if not memory:
+            await send_message(ctx, f"{get_translation(LOCALE, 'command_markov_memory_empty')}")
+            return
+    except Exception as e:
+        await send_message(ctx, f"{get_translation(LOCALE, 'command_markov_memory_error')}: {e}")
         return
-    except json.JSONDecodeError:
-        await send_message(ctx, f"{get_translation(LOCALE, 'command_markov_memory_is_corrupt')}")
-        return
+
     data_size = len(memory)
-    processed_data = 0
-    processing_message_ref = await send_message(ctx, f"{get_translation(LOCALE, 'command_markov_retraining').format(processed_data=processed_data, data_size=data_size)}")
+    processing_message_ref = await send_message(ctx, f"{get_translation(LOCALE, 'command_markov_retraining').format(processed_data=0, data_size=data_size)}")
     start_time = time.time()
-    for i, data in enumerate(memory):
-        processed_data += 1
-        if processed_data % 1000 == 0 or processed_data == data_size:
-            await send_message(ctx, f"{get_translation(LOCALE, 'command_markov_retraining').format(processed_data=processed_data, data_size=data_size)}", edit=True, message_reference=processing_message_ref)
 
     global markov_model
-    
     markov_model = train_markov_model(memory)
     save_markov_model(markov_model)
 
@@ -441,7 +552,7 @@ async def talk(ctx, sentence_size: int = 5):
         else:
             combined_message = coherent_response
         print(combined_message)
-        os.environ['gooberlatestgen'] = combined_message
+        os.environ['Tsubakilatestgen'] = combined_message
         await send_message(ctx, combined_message)
     else:
         await send_message(ctx, f"{get_translation(LOCALE, 'command_talk_generation_fail')}")
@@ -491,15 +602,26 @@ async def help(ctx):
 
 @bot.event
 async def on_message(message):
-    # Don't respond to ourselves or other bots
+    # Don't process messages from ourselves or other bots
     if message.author == bot.user or message.author.bot:
-        return
+        return await bot.process_commands(message)
 
     # Process commands first
     await bot.process_commands(message)
 
+    # Save the user's message to database if it's not already there
+    try:
+        # Preprocess the message
+        cleaned_message = re.sub(r'[^\w\s]', '', message.content).lower()
+        coherent_message = rephrase_for_coherence(cleaned_message)
+        
+        insert_message(conn, coherent_message)
+        print(f"{DEBUG}Saved user message to database: {coherent_message[:50]}...{RESET}")
+    except Exception as e:
+        print(f"{RED}Error saving user message to database: {e}{RESET}")
+
     # Check if we should respond to this message (random chance or specific trigger)
-    if random.random() < 1.0:  # 20% chance to respond
+    if random.random() < 0.8:  # 80% chance to respond can be lowered
         # Generate response using similar logic to the talk command
         response = None
         for _ in range(20):
@@ -513,32 +635,6 @@ async def on_message(message):
             cleaned_response = re.sub(r'[^\w\s]', '', response).lower()
             coherent_response = rephrase_for_coherence(cleaned_response)
             
-            # Save to memory.json as simple set of strings
-            try:
-                # Initialize memory.json with empty list if it doesn't exist
-                if not os.path.exists('memory.json'):
-                    with open('memory.json', 'w') as f:
-                        json.dump([], f)
-                
-                # Load existing memory
-                with open('memory.json', 'r') as f:
-                    memory = json.load(f)
-                
-                # Ensure memory is a list
-                if not isinstance(memory, list):
-                    memory = []
-                
-                # Add new response if it's not already there
-                if coherent_response not in memory:
-                    memory.append(coherent_response)
-                
-                # Save back to file
-                with open('memory.json', 'w') as f:
-                    json.dump(memory, f)
-                
-            except Exception as e:
-                print(f"Error saving to memory.json: {e}")
-
             # Send response
             if random.random() < 0.9 and is_positive(coherent_response):
                 gif_url = random.choice(positive_gifs)
@@ -546,7 +642,7 @@ async def on_message(message):
             else:
                 combined_message = coherent_response
             
-            os.environ['gooberlatestgen'] = combined_message
+            os.environ['Tsubakilatestgen'] = combined_message
             await message.channel.send(combined_message)
 
 
@@ -611,13 +707,12 @@ async def stats(ctx):
     except Exception as e:
         pass
     print("-----------------------------------")
-    memory_file = 'memory.json'
-    file_size = os.path.getsize(memory_file)
-    
-    with open(memory_file, 'r') as file:
-        line_count = sum(1 for _ in file)
+    message_count = count_messages(conn)
+    db_size = os.path.getsize(DATABASE_FILE)
+
     embed = discord.Embed(title=f"{get_translation(LOCALE, 'command_stats_embed_title')}", description=f"{get_translation(LOCALE, 'command_stats_embed_desc')}", color=discord.Color.blue())
-    embed.add_field(name=f"{get_translation(LOCALE, 'command_stats_embed_field1name')}", value=f"{get_translation(LOCALE, 'command_stats_embed_field1value').format(file_size=file_size, line_count=line_count)}", inline=False)
+    embed.add_field(name="Database Stats", 
+        value=f"Messages: {message_count}\nSize: {db_size/1024:.2f} KB", inline=False)
     embed.add_field(name=f"{get_translation(LOCALE, 'command_stats_embed_field2name')}", value=f"{get_translation(LOCALE, 'command_stats_embed_field2value').format(local_version=local_version, latest_version=latest_version)}", inline=False)
     embed.add_field(name=f"{get_translation(LOCALE, 'command_stats_embed_field3name')}", value=f"{get_translation(LOCALE, 'command_stats_embed_field3value').format(NAME=NAME, PREFIX=PREFIX, ownerid=ownerid, cooldown_time=cooldown_time, PING_LINE=PING_LINE, showmemenabled=showmemenabled, USERTRAIN_ENABLED=USERTRAIN_ENABLED, last_random_talk_time=last_random_talk_time, song=song, splashtext=splashtext)}", inline=False)
  

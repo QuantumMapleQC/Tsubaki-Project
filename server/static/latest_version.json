@@ -1,0 +1,8 @@
+{
+    "changes": "https://tsubaki.expect.ovh/goob/changes.txt",
+    "config_url": "https://tsubaki.expect.ovh/goob/config.py",
+    "download_url": "https://tsubaki.expect.ovh/goob/bot.py",
+    "hash": "9cc838a6a109c38985437ca064ddbd0018c2414aa9d8a3ad6650898d32210b99",
+    "last_modified": "2025-03-30T22:01:56Z",
+    "version": "0.14.8.3"
+}
