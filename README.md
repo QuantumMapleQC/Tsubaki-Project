@@ -12,11 +12,17 @@ I would highly recommend using Python 3.12 for better usage other than the lates
 
 # Required PIP
 ollama
-discord
+discord.py
+spacy
+spacytextblob
+requests
 psutil
-asyncio
+better_profanity
+python-dotenv
 dotenv
-platform
-json
+pillow
+watchdog
+py-cpuinfo
+websocket-client
+unalix==0.9
 
-Theres probably more pips but im too lazy to add them
