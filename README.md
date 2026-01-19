@@ -1,10 +1,22 @@
-# Nyara Tsubaki is a pretty known little goober catgirl made by @QuantumMapleQc! 
-Thanks to the authorisation of Whatdidyouexpect i have cloned his repo for my version of it with a few changes in the code
+# Nyara Tsubaki 
+Built in AI Assistant trained using Ollama llama:3.2 (Lightweight usage) Previously Nyara was using Markov but now i chosed to make her into a different person with better updated ressources also cause Markov was broken! 
 
-#Rules 
-Please do not attempt to BYPASS the filter in anyways possible!
-Anything you say to it will be controlled with care.
+# Am i allowed to fork this source? 
+Yes you have my Permission Maple to use this as a fork if you need any assistance on any issues feel free to leave me a message on Discord: herricksom
 
-# Host 
-This thing is being hosted on an ***Aspire-V3-551G*** a pretty old computer running Linux Mint. 
-![image](https://github.com/user-attachments/assets/b03d40e0-2200-46bd-a39c-956844bc188b)
+--------------------------------------
+Nyara Tsubaki is a clone of [Goober](https://github.com/gooberinc/goober-central) where she was supposed to be running with the servers of Expect but since the project is archived i decided to run it on my own servers.
+
+# Python Version
+I would highly recommend using Python 3.12 for better usage other than the latest versions.
+
+# Required PIP
+ollama
+discord
+psutil
+asyncio
+dotenv
+platform
+json
+
+Theres probably more pips but im too lazy to add them
